@@ -15,9 +15,9 @@ class GithubSearcher
 
     search(q, type) do |items|
       if type == :issues
-        # puts issue_items_to_lines(items)
+        puts issue_items_to_lines(items)
       else
-        # puts code_items_to_lines(items)
+        puts code_items_to_lines(items)
       end
     end
   end
@@ -87,18 +87,6 @@ class GithubSearcher
     end
   end
 
-  # def page(q, type, page, per_page)
-  #   github_token = `git config github.token`.strip
-  #   usage if github_token.empty?
-  #
-  #   url = "https://api.github.com/search/#{type}?per_page=#{per_page}&page=#{page}&q=#{CGI.escape(q)}"
-  #   command = "curl --silent --fail -H 'Authorization: token #{github_token}' -H 'Accept: application/vnd.github.v3.text-match+json' '#{url}'"
-  #   response = `#{command}`
-  #   raise "ERROR Request failed, reply was: #{response.inspect}" unless $?.success?
-  #
-  #   JSON.load(response)
-  # end
-
   def page(q, type, page, per_page)
     github_token = `git config github.token`.strip
     usage if github_token.empty?
@@ -117,7 +105,7 @@ class GithubSearcher
     response
 
     headers = response.headers
-    puts headers
+    # puts headers
 
     unless response.success?
       raise "\n\nERROR Request failed, reply was: #{response.body}"
@@ -140,16 +128,3 @@ class GithubSearcher
     # sleep(10)
   end
 end
-
-# type = (ARGV.delete('--issues') ? :issues : :code)
-#
-# q = ARGV.shift
-# usage if ARGV.size != 0
-#
-# search(q, type) do |items|
-#   if type == :issues
-#     puts issue_items_to_lines(items)
-#   else
-#     puts code_items_to_lines(items)
-#   end
-# end
