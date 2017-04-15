@@ -61,29 +61,20 @@ class GithubSearcher
   def search(q, type)
     per_page = 100
     page = 1
-    pages_until_sleep = 4
 
     loop do
-      with_rate_limiting do
-        if pages_until_sleep == 0
-          sleep(30)
-          pages_until_sleep = 4
-          next
-        end
-        response = page(q, type, page, per_page)
-        if page == 1
-          $stderr.puts "Found #{response.fetch("total_count")}"
-        else
-          $stderr.puts "Page #{page}"
-        end
-
-        items = response.fetch('items')
-        yield items
-
-        break if items.size < per_page
-        page += 1
-        pages_until_sleep -= 1
+      response = page(q, type, page, per_page)
+      if page == 1
+        $stderr.puts "Found #{response.fetch("total_count")}"
+      else
+        $stderr.puts "Page #{page}"
       end
+
+      items = response.fetch('items')
+      yield items
+
+      break if items.size < per_page
+      page += 1
     end
   end
 
@@ -98,17 +89,19 @@ class GithubSearcher
       conn.adapter Faraday.default_adapter
       # conn.response :logger
     end
-    response = connection.get path do |req|
-      req.headers['Authorization'] = "token #{github_token}"
-      req.headers['Accept'] = 'application/vnd.github.v3.text-match+json'
-    end
-    response
-
+    response = request_page(connection, path, github_token)
     headers = response.headers
     # puts headers
 
     unless response.success?
-      raise "\n\nERROR Request failed, reply was: #{response.body}"
+      retry_after = response.headers.fetch('Retry-After', nil)
+      if retry_after
+        sleep(retry_after.to_i)
+        response = request_page(connection, path, github_token)
+        headers = response.headers
+      else
+        raise "\n\nERROR Request failed, reply was: #{response.body}"
+      end
     end
 
     calls_remaining = headers.fetch('x-ratelimit-remaining').to_i
@@ -123,8 +116,10 @@ class GithubSearcher
     JSON.parse(response.body)
   end
 
-  def with_rate_limiting
-    yield
-    # sleep(10)
+  def request_page(connection, path, github_token)
+    connection.get path do |req|
+      req.headers['Authorization'] = "token #{github_token}"
+      req.headers['Accept'] = 'application/vnd.github.v3.text-match+json'
+    end
   end
 end
