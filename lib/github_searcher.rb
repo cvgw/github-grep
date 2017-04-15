@@ -1,6 +1,4 @@
-require 'cgi'
-require 'json'
-require 'faraday'
+require_relative 'github_search_worker'
 
 class GithubSearcher
   def initialize(arguments)
@@ -13,7 +11,7 @@ class GithubSearcher
     q = arguments.shift
     usage if arguments.size != 0
 
-    search(q, type) do |items|
+    GithubSearchWorker.search(q, type) do |items|
       if type == :issues
         puts issue_items_to_lines(items)
       else
@@ -57,69 +55,8 @@ class GithubSearcher
   def lines(item)
     item.fetch("text_matches").flat_map { |match| match.fetch('fragment').split("\n") }
   end
-
-  def search(q, type)
-    per_page = 100
-    page = 1
-
-    loop do
-      response = page(q, type, page, per_page)
-      if page == 1
-        $stderr.puts "Found #{response.fetch("total_count")}"
-      else
-        $stderr.puts "Page #{page}"
-      end
-
-      items = response.fetch('items')
-      yield items
-
-      break if items.size < per_page
-      page += 1
-    end
-  end
-
-  def page(q, type, page, per_page)
-    github_token = `git config github.token`.strip
-    usage if github_token.empty?
-    host = 'https://api.github.com'
-    path = "/search/#{type}?per_page=#{per_page}&page=#{page}&q=#{CGI.escape(q)}"
-
-    connection = Faraday.new(host) do |conn|
-      conn.request :url_encoded # form-encode POST params
-      conn.adapter Faraday.default_adapter
-      # conn.response :logger
-    end
-    response = request_page(connection, path, github_token)
-    headers = response.headers
-    # puts headers
-
-    unless response.success?
-      retry_after = response.headers.fetch('Retry-After', nil)
-      if retry_after
-        sleep(retry_after.to_i)
-        response = request_page(connection, path, github_token)
-        headers = response.headers
-      else
-        raise "\n\nERROR Request failed, reply was: #{response.body}"
-      end
-    end
-
-    calls_remaining = headers.fetch('x-ratelimit-remaining').to_i
-    total_allowed_calls_for_interval = headers.fetch('x-ratelimit-limit').to_i
-    puts total_allowed_calls_for_interval
-    puts calls_remaining
-
-    if calls_remaining <= 1
-      sleep(60)
-    end
-
-    JSON.parse(response.body)
-  end
-
-  def request_page(connection, path, github_token)
-    connection.get path do |req|
-      req.headers['Authorization'] = "token #{github_token}"
-      req.headers['Accept'] = 'application/vnd.github.v3.text-match+json'
-    end
-  end
 end
+
+
+
+
