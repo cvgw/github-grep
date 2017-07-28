@@ -1,15 +1,19 @@
 makes github search grep and pipeable
 
+# Setup
  - create a [application token](https://github.com/settings/applications) with read access
  - clone repo
- - follow script instructions
+ - set env variable GITHUB_AUTH_TOKEN
+```
+~/github-grep/$ bundle install
+```
+Add ~/github-grep/bin to your path
 
 ```
-bundle
 
 # search code:
-~/github-grep/bin/github-grep 'user:grosser unicorn' | grep 'narrow-it-down' | grep -v 'something good'
+github-grep 'user:grosser unicorn' | grep 'narrow-it-down' | grep -v 'something good'
 
 # search issues and PR comments:
-~/github-grep/bin/github-grep 'repo:kubernetes/kubernetes network error' --issues | grep 'narrow-it-down' | grep -v 'something good'
+github-grep 'repo:kubernetes/kubernetes network error' --issues | grep 'narrow-it-down' | grep -v 'something good'
 ```
