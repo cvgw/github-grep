@@ -32,11 +32,14 @@ class GithubSearchWorker
   private
 
   def page(q, type, page, per_page)
-    github_token = `git config github.token`.strip
     client = GithubSearchPageClient.new(q: q, type: type, page: page, per_page: per_page, github_token: github_token)
     with_response_handling do
       client.page
     end
+  end
+
+  def github_token
+    ENV['GITHUB_AUTH_TOKEN']
   end
 
   def with_response_handling

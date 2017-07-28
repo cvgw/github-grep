@@ -8,7 +8,7 @@ class GithubSearchPageClient
   end
 
   def page
-    usage if github_token.empty?
+    raise 'No Github Token Found' if github_token.empty?
     host = 'https://api.github.com'
     path = "/search/#{type}?per_page=#{per_page}&page=#{page_number}&q=#{CGI.escape(q)}"
 
